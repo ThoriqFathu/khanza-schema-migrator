@@ -75,3 +75,7 @@ migration*.sql
 build/
 dist/
 *.egg-info/
+
+# Release artifacts
+KhanzaSchemaMigrator-*.tar.gz
+KhanzaSchemaMigrator-*.zip

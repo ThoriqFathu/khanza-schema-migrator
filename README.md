@@ -54,13 +54,14 @@ Untuk pengguna umum, **tidak perlu menginstall Python, pip, PySide6, atau depend
 
 Gunakan package sesuai sistem operasi:
 
-| Platform            | Package                                 |
-| ------------------- | --------------------------------------- |
-| Linux x64           | `KhanzaSchemaMigrator-linux-x64.tar.gz` |
-| Windows x64         | `KhanzaSchemaMigrator-windows-x64.zip`  |
-| macOS Apple Silicon | `KhanzaSchemaMigrator-macos-arm64.zip`  |
+| Platform            | Package                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64           | [KhanzaSchemaMigrator-linux-x64.tar.gz](https://github.com/ThoriqFathu/khanza-schema-migrator/releases/download/v1.0.0/KhanzaSchemaMigrator-linux-x64.tar.gz) |
+| Windows x64         | [KhanzaSchemaMigrator-windows-x64.zip](https://github.com/ThoriqFathu/khanza-schema-migrator/releases/download/v1.0.0/KhanzaSchemaMigrator-windows-x64.zip)   |
+| macOS Apple Silicon | [KhanzaSchemaMigrator-macos-arm64.zip](https://github.com/ThoriqFathu/khanza-schema-migrator/releases/download/v1.0.0/KhanzaSchemaMigrator-macos-arm64.zip)   |
 
 Setelah package didownload, extract terlebih dahulu.
+
 
 ### Linux
 
@@ -649,7 +650,15 @@ KhanzaSchemaMigrator-macos-arm64.zip
 Source code dan release artifact dipisahkan. Artifact hasil build tidak disimpan sebagai bagian dari source repository.
 
 ---
+## Pengembangan
 
-# License
+Source code tersedia secara terbuka agar dapat digunakan, dipelajari, dan dikembangkan lebih lanjut oleh komunitas sesuai ketentuan lisensi project.
 
-PencariCuan
+Untuk saat ini, pengembangan fitur dan pemeliharaan project dilakukan oleh pengembang utama. Mekanisme kontribusi dari komunitas dapat ditambahkan pada tahap berikutnya apabila diperlukan.
+
+## Lisensi
+
+Khanza Schema Migrator merupakan perangkat lunak open source dan dirilis menggunakan **MIT License**.
+
+Lisensi ini memungkinkan penggunaan, modifikasi, dan distribusi ulang aplikasi sesuai dengan ketentuan yang tercantum pada file [LICENSE](LICENSE).
+

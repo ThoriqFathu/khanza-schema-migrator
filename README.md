@@ -662,3 +662,115 @@ Khanza Schema Migrator merupakan perangkat lunak open source dan dirilis menggun
 
 Lisensi ini memungkinkan penggunaan, modifikasi, dan distribusi ulang aplikasi sesuai dengan ketentuan yang tercantum pada file [LICENSE](LICENSE).
 
+
+
+## Structure Builder
+
+Aplikasi yang sama menyediakan tab **Schema Migration** dan **Structure Builder**.
+Entry point tetap `run_gui.py` dan executable tetap `KhanzaSchemaMigrator`.
+
+- **Database**: isi Host, Port, Database, Username, Password; jalankan **Test Connection**,
+  tentukan output, lalu **Build Structure**.
+- **Structure SQL**: pilih input dan output, lalu **Validate**. Jika path sama, file hanya
+  divalidasi; jika berbeda, bytes disalin tanpa rewrite formatting.
+- **Full SQL Backup**: **Analyze** menghitung tabel dan statement yang akan dibuang;
+  **Extract Structure** menulis hasil ke output yang berbeda dari backup sumber.
+- Setelah sukses, **Use as Existing Schema** atau **Use as Khanza Schema** mengisi input
+  migration dan membuka tab tersebut. Proses migration tetap dimulai oleh pengguna.
+
+Hasil menampilkan jumlah CREATE TABLE, ukuran file, SHA256, serta jumlah statement yang
+  dibuang. Output dipublikasikan dengan atomic replace setelah staging lolos validasi.
+  Kegagalan tidak mengganti output lama. Operasi berjalan di QThread; aplikasi menunggu
+  operasi selesai sebelum mengizinkan window ditutup.
+
+### Client database
+
+Mode file tidak memerlukan dependency baru. Mode Database memerlukan client tools
+MySQL/MariaDB yang dipasang terpisah, termasuk pada versi executable:
+
+- Dump: `mysqldump` atau `mariadb-dump`.
+- Test koneksi: `mysql` atau `mariadb`.
+
+Client ditemukan lewat PATH, atau dipilih lewat field executable opsional. Gunakan client
+sesuai keluarga/versi server. Client eksternal tidak dibundel oleh PyInstaller.
+Test koneksi menjalankan `SELECT 1`; dump memakai `--no-data --routines --triggers --events
+--skip-lock-tables --no-tablespaces`. Tidak ada import SQL maupun perubahan schema/data pada
+server sumber. Gunakan akun dengan izin membaca metadata yang diperlukan untuk objek dump.
+
+Password tidak masuk argumen proses, log, atau pesan error. Adapter membuat option file
+sementara melalui `--defaults-file` (opsi pertama), lalu menghapusnya setelah client selesai.
+File memakai mode 0600 pada POSIX; Windows mengikuti ACL direktori temporary pengguna.
+Trade-off: credential berada sebentar di disk dan dapat tertinggal bila proses/OS berhenti
+paksa. Password tidak disimpan dalam konfigurasi aplikasi. Stderr client sengaja tidak
+ditampilkan karena berpotensi memuat credential; GUI memberi petunjuk pemeriksaan koneksi,
+izin, dan kecocokan versi. Timeout test 20 detik dan dump 1 jam.
+
+Referensi opsi: [MySQL mysqldump](https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html)
+dan [MariaDB mariadb-dump](https://mariadb.com/docs/server/clients-and-utilities/backup-restore-and-import-clients/mariadb-dump).
+
+### Batas format SQL
+
+Scanner memproses bytes secara streaming, dengan statement di atas 1 MiB dialihkan ke
+file temporary. Ruang temporary perlu cukup untuk statement INSERT terbesar. Scanner
+mengenali strings/quoted identifiers, escapes, comments, executable version comments,
+dan `DELIMITER`. CREATE/ALTER/DROP objek schema serta SET/USE dipertahankan; statement lain
+(termasuk top-level INSERT/REPLACE/UPDATE/DELETE/LOAD dan LOCK/UNLOCK) dibuang saat ekstraksi.
+SQL di dalam definisi trigger/procedure/function/event tetap dipertahankan karena bagian DDL.
+Analysis melaporkan jumlah statement yang dibuang, bukan jumlah baris data.
+
+Validasi bersifat dasar: input terbaca, statement terminated, quote/comment tertutup,
+CREATE TABLE ditemukan, dan tidak ada top-level statement data. Ini bukan parser syntax SQL
+lengkap. Dump terpotong dan mode `NO_BACKSLASH_ESCAPES` ditolak dengan pesan error.
+Input diharapkan dump MySQL/MariaDB dengan terminator statement, bukan format backup biner.
+
+Parser migration existing tetap tidak diubah: ia membaca CREATE TABLE multiline dengan
+identifier backtick serta kolom/index/FK inline. Definisi VIEW/routine dan ALTER TABLE
+terpisah dipertahankan dalam structure.sql tetapi belum dibandingkan oleh migration.
+Validasi structure tidak menjamin semua variasi SQL dapat dikonsumsi parser migration.
+
+### Modul dan test
+
+Core Qt-independent ada di `structure_builder/models.py`, `service.py`, `sql_dump.py`,
+dan `database.py`. `DatabaseProvider` dapat diganti fake tanpa database nyata.
+Presentation ada di `gui/widgets/structure_builder_tab.py` dan worker di
+`gui/workers/structure_worker.py`; composition/navigation ada di `gui/main_window.py`.
+
+```bash
+mkdir -p structure_builder tests
+python -m unittest discover -s tests -v
+pyinstaller KhanzaSchemaMigrator.spec
+```
+
+Test menggunakan unittest standard library; UI test menggunakan Qt offscreen. Cakupan
+termasuk validasi, ekstraksi statement besar, DELIMITER/routines, keamanan credential,
+output atomik, regresi MigrationService, worker error, serta kedua tombol handoff.
+`test_callback.py` existing tetap merupakan contoh/test manual interaktif.
+Modul baru di-import secara statis sehingga spec existing tetap dapat digunakan.
+Pengujian koneksi database nyata dan build Windows/macOS perlu dilakukan pada environment target.
+
+
+### Live Activity Log
+
+Tab Structure Builder memakai area hasil existing sebagai **Activity Log** read-only.
+Setiap operasi membersihkan log sebelumnya, menampilkan Starting, dan menonaktifkan
+form sampai worker selesai. Pesan bertimestamp lokal `[HH:mm:ss]` ditambahkan langsung
+melalui signal Qt dan auto-scroll; log tetap tersedia sesudah success/error. Maksimal
+5.000 baris terbaru dipertahankan untuk membatasi memory UI.
+
+Callback progress tersedia pada `StructureService.build`, `validate`, `analyze`,
+`test_connection`, serta port `DatabaseProvider`. Semua callback opsional dan core tetap
+independen dari Qt. `ProgressReader` membungkus pembacaan file tanpa mengubah parser atau
+bytes output: progress byte dibatasi sekali per detik, ditambah laporan akhir. Hashing
+dan copying juga melaporkan byte; jumlah statement yang dibuang dirangkum di akhir.
+
+Adapter database menggunakan `Popen.wait` dalam worker yang sama, tanpa thread tambahan.
+Setiap dua detik ia melaporkan bahwa client masih berjalan dan ukuran output yang sudah
+teramati. Ini bukan progress per-table atau estimasi persentase database. Test koneksi
+adalah action tersendiri; Build tidak menambahkan koneksi test terpisah. Stderr tidak
+ditampilkan dan keberhasilan ditentukan oleh return code. Argumen command, environment,
+credential file sementara, dan password tidak dimasukkan ke log. Worker dan presentation
+juga menyamarkan password pada pesan progress/error. Error file credential sementara
+diubah menjadi pesan aman tanpa path sensitif.
+
+Test live logging ada di `tests/test_activity_log.py`, termasuk pesan sebelum completion,
+throttling, auto-scroll, redaction, subprocess heartbeat/timeout, dan stderr sukses.

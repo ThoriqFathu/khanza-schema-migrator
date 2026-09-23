@@ -29,6 +29,7 @@ from gui.widgets.summary_widget import (
 )
 from .widgets.file_selector import FileSelector
 from .workers.migration_worker import MigrationWorker
+from .widgets.structure_builder_tab import StructureBuilderTab
 
 
 class MainWindow(QMainWindow):
@@ -36,7 +37,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle(
-            "Schema Migration Generator"
+            "Khanza Schema Migrator"
         )
 
         self.resize(1100, 750)
@@ -48,7 +49,28 @@ class MainWindow(QMainWindow):
 
     def build_ui(self):
         central = QWidget()
-        self.setCentralWidget(central)
+        self.main_tabs = QTabWidget()
+        self.setCentralWidget(self.main_tabs)
+
+        # Structure Builder di tab paling kiri
+        self.structure_tab = StructureBuilderTab()
+        self.main_tabs.addTab(
+            self.structure_tab,
+            "Structure Builder",
+        )
+
+        # Schema Migration di sebelah kanan
+        self.main_tabs.addTab(
+            central,
+            "Schema Migration",
+        )
+
+        self.structure_tab.use_existing.connect(
+            self.use_structure_as_existing
+        )
+        self.structure_tab.use_khanza.connect(
+            self.use_structure_as_khanza
+        )
 
         main_layout = QVBoxLayout(central)
 
@@ -234,6 +256,21 @@ class MainWindow(QMainWindow):
         )
 
         
+
+    def use_structure_as_existing(self, path: str) -> None:
+        self.existing_selector.set_text(path)
+        self.main_tabs.setCurrentIndex(0)
+
+    def use_structure_as_khanza(self, path: str) -> None:
+        self.khanza_selector.set_text(path)
+        self.main_tabs.setCurrentIndex(0)
+
+    def closeEvent(self, event) -> None:
+        if self.structure_tab.busy or self.worker_thread is not None:
+            QMessageBox.information(self, "Proses berjalan", "Tunggu proses selesai sebelum menutup aplikasi.")
+            event.ignore()
+            return
+        super().closeEvent(event)
 
     def generate_migration(self):
         self.summary_widget.clear()
